@@ -1,48 +1,119 @@
 <html>
-  <head>
-    <meta charset="utf-8">
-    <title>MCU for Ayame-Labo</title>
-    <script src="https://unpkg.com/@open-ayame/ayame-web-sdk@2020.2.1/dist/ayame.min.js"></script>
-    <!--
+
+<head>
+  <meta charset="utf-8">
+  <title>MCU for Ayame-Labo</title>
+  <script src="https://unpkg.com/@open-ayame/ayame-web-sdk@2020.2.1/dist/ayame.min.js"></script>
+  <!--
       https://github.com/mganeko/browser_mcu_core
       browser_mcu_core is provided under MIT license
     -->
-    <script src="core/js/browser_mcu_core.js"></script>
-  </head>
-  <body>
-    MCU for Ayame-Labo.
-    <br />
-    <div>
-      <input type="checkbox" id="video" checked="checked" />
-      <label>video</label>
-      <select name="videoCodecType" id="videoCodecType">
-        <option value="VP8">VP8</option>
-        <option value="VP9" selected="1">VP9</option>
-        <option value="H264">H.264</option>
-      </select>
-      <input type="checkbox" id="audio" checked="checked" />
-      <label>audio</label>
-      &nbsp;&nbsp;
-      <label>Room-Prefix:
-      <input id="room_prefix" type="text" size="32" value="" placeholder="PLEASE set RoomID prefix" />
-      </label>
-      <button id="connect_button" onclick="connect()">Connect</button>
-      <button id="disconnect_button" onclick="disconnect()">Disconnect</button>
-    </div>
-    <p id="clientId"></p>
-    <canvas id="canvas_mix" width="640x" height="480px" style="border: 1px solid black;" ></canvas>
-    <br />
-    <div id="remote">
-    </div>
-    <script>
-      "use strict"
-      let mcu = new BrowserMCU();
+  <script src="core/js/browser_mcu_core.js"></script>
+</head>
 
-      function initMcu() {
-        mcu.setCanvas(document.getElementById('canvas_mix'));
-        mcu.setContainer(document.getElementById('remote'));
-        mcu.setAudioMode(BrowserMCU.AUDIO_MODE_ALL);
+<body>
+  MCU for Ayame-Labo.
+  <br />
+  <div>
+    <label>Signaling-Key:
+      <input id="signaling_key" type="text" size="32" value="" placeholder="PLEASE set you key" />
+    </label>
+    <br />
+    <label>Room-Prefix:
+      <input id="room_prefix" type="text" size="32" value="" placeholder="PLEASE set RoomID prefix" />
+    </label>
+    <button id="connect_button" onclick="connect()">Connect</button>
+    <button id="disconnect_button" onclick="disconnect()">Disconnect</button>
+  </div>
+  <p id="clientId"></p>
+  <canvas id="canvas_mix" width="640x" height="480px" style="border: 1px solid black;"></canvas>
+  <br />
+  <div id="remote">
+  </div>
+  <script>
+    "use strict"
+    let mcu = new BrowserMCU();
+
+    function initMcu() {
+      mcu.setCanvas(document.getElementById('canvas_mix'));
+      mcu.setContainer(document.getElementById('remote'));
+      mcu.setAudioMode(BrowserMCU.AUDIO_MODE_ALL);
+    }
+
+    // ---- Ayame ----
+    const signalingUrl = 'wss://ayame-labo.shiguredo.jp/signaling';
+    const AYAME_CONNECTION_MAX = 4;
+    const ayameConnections = Array(AYAME_CONNECTION_MAX);
+    const ayameKey = null;
+    const ayameRoomPrefix = 'ayame_browser_mcu';
+
+    function initAyame() {
+      for (let i = 0; i < AYAME_CONNECTION_MAX; i++) {
+        ayameConnections[i] = Ayame.connection(signalingUrl, buildAyameRoomId(ayameRoomPrefix, i));
       }
-    </script>
-  </body>
+    }
+
+    function buildAyameRoomId(ayameRoomPrefix, index) {
+      const roomId = ayameRoomPrefix + '-' + index;
+      return roomId;
+    }
+
+    function connectAyame() {
+      for (let i = 0; i < AYAME_CONNECTION_MAX; i++) {
+        const conn = ayameConnections[i];
+
+        // -- setup --
+        conn.on('open', (e) => console.log('auth:', e.authzMetadata));
+        conn.on('disconnect', (e) => {
+          console.log('disconnected:', e);
+          //handleDisconnect();
+        });
+        conn.on('addstream', async (e) => {
+          console.log(e.stream);
+        });
+        conn.on('removestream', async (e) => {
+          console.log('removestream:', e);
+        });
+
+        // -- connect --
+        conn.connect(null)
+          .then(() => {
+            console.log('connected');
+          })
+          .catch(err => { console.error('connect ERROR:', err) });
+      }
+    }
+
+    // --- handler ---
+    function connect() {
+      initAyame();
+      connectAyame();
+    }
+
+    // --- GUI control ---
+    function updateButtons() {
+    }
+
+    function enabelElement(id) {
+      let element = document.getElementById(id);
+      if (element) {
+        element.removeAttribute('disabled');
+      }
+    }
+
+    function disableElement(id) {
+      let element = document.getElementById(id);
+      if (element) {
+        element.setAttribute('disabled', '1');
+      }
+    }
+
+    // ================= initilaise onload ========
+    initMcu();
+
+    // --- control GUI ---
+    updateButtons();
+  </script>
+</body>
+
 </html>
