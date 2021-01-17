@@ -1,0 +1,16 @@
+{
+  "name": "browser_mcu_ayame",
+  "version": "0.8.0",
+  "description": "Browser MCU for Ayame Labo",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "webrtc",
+    "mcu",
+    "Ayame-labo"
+  ],
+  "author": "mganeko",
+  "license": "MIT"
+}

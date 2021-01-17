@@ -1,0 +1,48 @@
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>MCU for Ayame-Labo</title>
+    <script src="https://unpkg.com/@open-ayame/ayame-web-sdk@2020.2.1/dist/ayame.min.js"></script>
+    <!--
+      https://github.com/mganeko/browser_mcu_core
+      browser_mcu_core is provided under MIT license
+    -->
+    <script src="core/js/browser_mcu_core.js"></script>
+  </head>
+  <body>
+    MCU for Ayame-Labo.
+    <br />
+    <div>
+      <input type="checkbox" id="video" checked="checked" />
+      <label>video</label>
+      <select name="videoCodecType" id="videoCodecType">
+        <option value="VP8">VP8</option>
+        <option value="VP9" selected="1">VP9</option>
+        <option value="H264">H.264</option>
+      </select>
+      <input type="checkbox" id="audio" checked="checked" />
+      <label>audio</label>
+      &nbsp;&nbsp;
+      <label>Room-Prefix:
+      <input id="room_prefix" type="text" size="32" value="" placeholder="PLEASE set RoomID prefix" />
+      </label>
+      <button id="connect_button" onclick="connect()">Connect</button>
+      <button id="disconnect_button" onclick="disconnect()">Disconnect</button>
+    </div>
+    <p id="clientId"></p>
+    <canvas id="canvas_mix" width="640x" height="480px" style="border: 1px solid black;" ></canvas>
+    <br />
+    <div id="remote">
+    </div>
+    <script>
+      "use strict"
+      let mcu = new BrowserMCU();
+
+      function initMcu() {
+        mcu.setCanvas(document.getElementById('canvas_mix'));
+        mcu.setContainer(document.getElementById('remote'));
+        mcu.setAudioMode(BrowserMCU.AUDIO_MODE_ALL);
+      }
+    </script>
+  </body>
+</html>
