@@ -7,7 +7,16 @@
   <!--
       https://github.com/mganeko/browser_mcu_core
       browser_mcu_core is provided under MIT license
-    -->
+  -->
+  <!-- TODO --
+    - use room-prefix from GUI
+    - use signaling-key from GUI
+    - use room-prefix from URL
+    - use signaling-key from URL
+    - re-connect from remote
+    - re-connect by mcu
+    - GUI enable control
+  -->
   <script src="core/js/browser_mcu_core.js"></script>
 </head>
 
@@ -32,24 +41,27 @@
   </div>
   <script>
     "use strict"
-    let mcu = new BrowserMCU();
+    const mcu = new BrowserMCU();
 
     function initMcu() {
       mcu.setCanvas(document.getElementById('canvas_mix'));
       mcu.setContainer(document.getElementById('remote'));
-      mcu.setAudioMode(BrowserMCU.AUDIO_MODE_ALL);
+      mcu.setAudioMode(BrowserMCU.AUDIO_MODE_MINUS_ONE);
     }
 
     // ---- Ayame ----
     const signalingUrl = 'wss://ayame-labo.shiguredo.jp/signaling';
     const AYAME_CONNECTION_MAX = 4;
     const ayameConnections = Array(AYAME_CONNECTION_MAX);
+    const remoteStreams = Array(AYAME_CONNECTION_MAX);
     const ayameKey = null;
     const ayameRoomPrefix = 'ayame_browser_mcu';
 
     function initAyame() {
       for (let i = 0; i < AYAME_CONNECTION_MAX; i++) {
-        ayameConnections[i] = Ayame.connection(signalingUrl, buildAyameRoomId(ayameRoomPrefix, i));
+        const roomId = buildAyameRoomId(ayameRoomPrefix, i);
+        console.log('roomId=', roomId);
+        ayameConnections[i] = Ayame.connection(signalingUrl, roomId);
       }
     }
 
@@ -61,22 +73,51 @@
     function connectAyame() {
       for (let i = 0; i < AYAME_CONNECTION_MAX; i++) {
         const conn = ayameConnections[i];
+        const id = buildAyameRoomId(ayameRoomPrefix, i);
 
         // -- setup --
         conn.on('open', (e) => console.log('auth:', e.authzMetadata));
         conn.on('disconnect', (e) => {
           console.log('disconnected:', e);
-          //handleDisconnect();
+
+          const stream = remoteStreams[i];
+          if (stream) {
+            mcu.removeRemoteAudio(stream);
+            mcu.removeRemoteVideo(stream);
+          }
+          remoteStreams[i] = null;
+
+          // -- try re-connect --
+          console.log('try re-connect id=' + id);
+          const mixStream = mcu.getMinusOneStream(id);
+          console.log('try re-connect id=' + id, mixStream);
+          conn.connect(mixStream)
+            .then(() => {
+              console.log('re-connected');
+            })
+            .catch(err => { console.error('re-connect ERROR:', err) });
         });
         conn.on('addstream', async (e) => {
-          console.log(e.stream);
+          const remoteStream = e.stream;
+          console.log(remoteStream);
+          remoteStreams[i] = remoteStream;
+          mcu.addRemoteVideo(remoteStream);
+          mcu.addRemoteAudioMinusOne(id, remoteStream);
         });
         conn.on('removestream', async (e) => {
           console.log('removestream:', e);
+
+          const stream = remoteStreams[i];
+          if (stream) {
+            mcu.removeRemoteAudio(stream);
+            mcu.removeRemoteVideo(stream);
+          }
+          remoteStreams[i] = null;
         });
 
         // -- connect --
-        conn.connect(null)
+        const mixStream = mcu.prepareMinusOneStream(id);
+        conn.connect(mixStream)
           .then(() => {
             console.log('connected');
           })
@@ -84,10 +125,25 @@
       }
     }
 
+    function disconnectAyame() {
+      for (let i = 0; i < AYAME_CONNECTION_MAX; i++) {
+        const conn = ayameConnections[i];
+        conn.disconnect();
+        remoteStreams[i] = null;
+      }
+    }
+
     // --- handler ---
     function connect() {
       initAyame();
+      mcu.startMix();
       connectAyame();
+    }
+
+    function disconnect() {
+      disconnectAyame();
+      mcu.stopMix();
+      mcu.removeAllRemoteVideo();
     }
 
     // --- GUI control ---
