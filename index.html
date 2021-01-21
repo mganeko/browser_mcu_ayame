@@ -11,11 +11,13 @@
   <!-- TODO --
     - DONE: use room-prefix from GUI
     - DONE: use signaling-key from GUI
-    - use room-prefix from URL
-    - use signaling-key from URL
-    - re-connect from remote
+    - DONE: use room-prefix from URL
+    - DONE: use signaling-key from URL
+    - DONE:re-connect from remote
+      - DONE: auto re-connet mcu
     - re-connect by mcu
-    - GUI enable control
+      - do not auto re-connect on mcu disconnect
+    - DONE: GUI enable control
   -->
   <script src="core/js/browser_mcu_core.js"></script>
 </head>
@@ -96,18 +98,23 @@
           remoteStreams[i] = null;
 
           // -- try re-connect --
-          console.log('try re-connect id=' + id);
-          const mixStream = mcu.getMinusOneStream(id);
-          console.log('try re-connect id=' + id, mixStream);
-          conn.connect(mixStream)
-            .then(() => {
-              console.log('re-connected');
-            })
-            .catch(err => { console.error('re-connect ERROR:', err) });
+          if (doesNeedRecoonect()) {
+            console.log('try re-connect id=' + id);
+            const mixStream = mcu.getMinusOneStream(id);
+            console.log('try re-connect id=' + id, mixStream);
+            conn.connect(mixStream)
+              .then(() => {
+                console.log('re-connected');
+              })
+              .catch(err => { console.error('re-connect ERROR:', err) });
+          }
+          else {
+            console.log('do not re-connect id=' + id);
+          }
         });
         conn.on('addstream', async (e) => {
           const remoteStream = e.stream;
-          console.log(remoteStream);
+          console.log('addstream:', remoteStream);
           remoteStreams[i] = remoteStream;
           mcu.addRemoteVideo(remoteStream);
           mcu.addRemoteAudioMinusOne(id, remoteStream);
@@ -141,20 +148,76 @@
       }
     }
 
+    let _isConnectedFlag = false;
+    function setConnected(flag) {
+      _isConnectedFlag = flag;
+    }
+
+    function isConnected() {
+      return _isConnectedFlag;
+    }
+
+    function doesNeedRecoonect() {
+      if (isConnected()) {
+        return true; // auto re-connect when MCU connected
+      }
+      else {
+        return;
+      }
+    }
+
     // --- handler ---
     function connect() {
       initAyame();
       mcu.startMix();
       connectAyame();
+      setConnected(true);
+
+      updateButtons();
     }
 
     function disconnect() {
+      setConnected(false);
       disconnectAyame();
       mcu.stopMix();
       mcu.removeAllRemoteVideo();
+      mcu.removeAllRemoteAudioMinusOne();
+      updateButtons();
+    }
+
+    // ---- URL ----
+    function getRoomFromUrl() {
+      const search = window.location.search;
+      const re = new RegExp('room=([^&=]+)');
+      const results = re.exec(search);
+      let room = '';
+      if (results) {
+        room = results[1];
+      }
+      return room;
+    }
+
+    function getKeyFromUrl() {
+      const search = window.location.search;
+      const re = new RegExp('key=([^&=]+)');
+      const results = re.exec(search);
+      let key = null;
+      if (results) {
+        key = results[1];
+      }
+      return key;
     }
 
     // --- GUI control ---
+    function updateParamFromUrl() {
+      const roomFromUrl = getRoomFromUrl();
+      const keyFromUrl = getKeyFromUrl();
+      console.log('keyFromUrl=%s, roomFromUrl=%s', keyFromUrl, roomFromUrl);
+      document.getElementById('room_prefix').value = roomFromUrl;
+      document.getElementById('signaling_key').value = keyFromUrl;
+    }
+
+
     function getRoomPrefix() {
       const roomPrefix = document.getElementById('room_prefix').value;
       if (roomPrefix && roomPrefix !== '') {
@@ -176,6 +239,18 @@
     }
 
     function updateButtons() {
+      if (isConnected()) {
+        disableElement('connect_button');
+        enabelElement('disconnect_button');
+        disableElement('room_prefix');
+        disableElement('signaling_key');
+      }
+      else {
+        enabelElement('connect_button');
+        disableElement('disconnect_button');
+        enabelElement('room_prefix');
+        enabelElement('signaling_key');
+      }
     }
 
     function enabelElement(id) {
@@ -193,6 +268,7 @@
     }
 
     // ================= initilaise onload ========
+    updateParamFromUrl();
     initMcu();
 
     // --- control GUI ---
