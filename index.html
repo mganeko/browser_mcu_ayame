@@ -9,8 +9,8 @@
       browser_mcu_core is provided under MIT license
   -->
   <!-- TODO --
-    - use room-prefix from GUI
-    - use signaling-key from GUI
+    - DONE: use room-prefix from GUI
+    - DONE: use signaling-key from GUI
     - use room-prefix from URL
     - use signaling-key from URL
     - re-connect from remote
@@ -54,14 +54,21 @@
     const AYAME_CONNECTION_MAX = 4;
     const ayameConnections = Array(AYAME_CONNECTION_MAX);
     const remoteStreams = Array(AYAME_CONNECTION_MAX);
-    const ayameKey = null;
-    const ayameRoomPrefix = 'ayame_browser_mcu';
+    const DEFAULT_SIGNALING_KEY = null;
+    const DEFAULT_ROOM_PREFIX = 'ayame_browser_mcu';
 
     function initAyame() {
+      const roomPrefix = getRoomPrefix();
+      const signalingKey = getSignalingKey();
+      const options = Ayame.defaultOptions;
+      if (signalingKey) {
+        options.signalingKey = signalingKey;
+      }
+
       for (let i = 0; i < AYAME_CONNECTION_MAX; i++) {
-        const roomId = buildAyameRoomId(ayameRoomPrefix, i);
-        console.log('roomId=', roomId);
-        ayameConnections[i] = Ayame.connection(signalingUrl, roomId);
+        const roomId = buildAyameRoomId(roomPrefix, i);
+        console.log('key=%s, roomId=%s', signalingKey, roomId);
+        ayameConnections[i] = Ayame.connection(signalingUrl, roomId, options);
       }
     }
 
@@ -71,9 +78,10 @@
     }
 
     function connectAyame() {
+      const roomPrefix = getRoomPrefix();
       for (let i = 0; i < AYAME_CONNECTION_MAX; i++) {
         const conn = ayameConnections[i];
-        const id = buildAyameRoomId(ayameRoomPrefix, i);
+        const id = buildAyameRoomId(roomPrefix, i);
 
         // -- setup --
         conn.on('open', (e) => console.log('auth:', e.authzMetadata));
@@ -147,6 +155,26 @@
     }
 
     // --- GUI control ---
+    function getRoomPrefix() {
+      const roomPrefix = document.getElementById('room_prefix').value;
+      if (roomPrefix && roomPrefix !== '') {
+        return roomPrefix;
+      }
+      else {
+        return DEFAULT_ROOM_PREFIX;
+      }
+    }
+
+    function getSignalingKey() {
+      const signalingKey = document.getElementById('signaling_key').value;
+      if (signalingKey && signalingKey !== '') {
+        return signalingKey;
+      }
+      else {
+        return DEFAULT_SIGNALING_KEY;
+      }
+    }
+
     function updateButtons() {
     }
 
