@@ -15,9 +15,13 @@
     - DONE: use signaling-key from URL
     - DONE:re-connect from remote
       - DONE: auto re-connet mcu
-    - re-connect by mcu
-      - do not auto re-connect on mcu disconnect
+    - DONE: re-connect by hand from mcu
+      - DONE: do not auto re-connect on mcu disconnect
     - DONE: GUI enable control
+    - DONE: roomId start from 1
+    - select room size 4 or 9
+    - write READEME.md
+    - draw figure
   -->
   <script src="core/js/browser_mcu_core.js"></script>
 </head>
@@ -74,8 +78,9 @@
       }
     }
 
+    // roomID: 1..AYAME_CONNECTION_MAX (1 start)
     function buildAyameRoomId(ayameRoomPrefix, index) {
-      const roomId = ayameRoomPrefix + '-' + index;
+      const roomId = ayameRoomPrefix + '-' + (index + 1);
       return roomId;
     }
 
