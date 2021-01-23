@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <title>MCU for Ayame-Labo</title>
-  <script src="https://unpkg.com/@open-ayame/ayame-web-sdk@2020.2.1/dist/ayame.min.js"></script>
+  <script src="https://unpkg.com/@open-ayame/ayame-web-sdk@2020.3.0/dist/ayame.min.js"></script>
   <!--
       https://github.com/mganeko/browser_mcu_core
       browser_mcu_core is provided under MIT license
@@ -19,7 +19,8 @@
       - DONE: do not auto re-connect on mcu disconnect
     - DONE: GUI enable control
     - DONE: roomId start from 1
-    - select room size 4 or 9
+    - DONE: select room size 4 or 9
+    - prepare test page 
     - write READEME.md
     - draw figure
   -->
@@ -31,12 +32,21 @@
   <br />
   <div>
     <label>Signaling-Key:
-      <input id="signaling_key" type="text" size="32" value="" placeholder="PLEASE set you key" />
+      <input id="signaling_key" type="text" size="48" value="" placeholder="PLEASE set you key" />
     </label>
     <br />
     <label>Room-Prefix:
       <input id="room_prefix" type="text" size="32" value="" placeholder="PLEASE set RoomID prefix" />
     </label>
+    &nbsp;
+    <label>Room-Capacity:
+      <select id="room_capacity">
+        <option value="4">4</option>
+        <option value="9">9</option>
+        <option value="16">16</option>
+      </select>
+    </label>
+    &nbsp;
     <button id="connect_button" onclick="connect()">Connect</button>
     <button id="disconnect_button" onclick="disconnect()">Disconnect</button>
   </div>
@@ -57,7 +67,8 @@
 
     // ---- Ayame ----
     const signalingUrl = 'wss://ayame-labo.shiguredo.jp/signaling';
-    const AYAME_CONNECTION_MAX = 4;
+    const AYAME_CONNECTION_MIN = 4;
+    const AYAME_CONNECTION_MAX = 16;
     const ayameConnections = Array(AYAME_CONNECTION_MAX);
     const remoteStreams = Array(AYAME_CONNECTION_MAX);
     const DEFAULT_SIGNALING_KEY = null;
@@ -66,12 +77,13 @@
     function initAyame() {
       const roomPrefix = getRoomPrefix();
       const signalingKey = getSignalingKey();
+      const roomCapacity = getRoomCapacity();
       const options = Ayame.defaultOptions;
       if (signalingKey) {
         options.signalingKey = signalingKey;
       }
 
-      for (let i = 0; i < AYAME_CONNECTION_MAX; i++) {
+      for (let i = 0; i < roomCapacity; i++) {
         const roomId = buildAyameRoomId(roomPrefix, i);
         console.log('key=%s, roomId=%s', signalingKey, roomId);
         ayameConnections[i] = Ayame.connection(signalingUrl, roomId, options);
@@ -86,7 +98,8 @@
 
     function connectAyame() {
       const roomPrefix = getRoomPrefix();
-      for (let i = 0; i < AYAME_CONNECTION_MAX; i++) {
+      const roomCapacity = getRoomCapacity();
+      for (let i = 0; i < roomCapacity; i++) {
         const conn = ayameConnections[i];
         const id = buildAyameRoomId(roomPrefix, i);
 
@@ -148,8 +161,11 @@
     function disconnectAyame() {
       for (let i = 0; i < AYAME_CONNECTION_MAX; i++) {
         const conn = ayameConnections[i];
-        conn.disconnect();
-        remoteStreams[i] = null;
+        if (conn) {
+          conn.disconnect();
+          remoteStreams[i] = null;
+          ayameConnections[i] = null;
+        }
       }
     }
 
@@ -222,7 +238,6 @@
       document.getElementById('signaling_key').value = keyFromUrl;
     }
 
-
     function getRoomPrefix() {
       const roomPrefix = document.getElementById('room_prefix').value;
       if (roomPrefix && roomPrefix !== '') {
@@ -243,18 +258,34 @@
       }
     }
 
+    function getRoomCapacity() {
+      const capacity = document.getElementById('room_capacity').value;
+      console.log('Capacity:', capacity);
+      if (capacity < AYAME_CONNECTION_MIN) {
+        return AYAME_CONNECTION_MIN;
+      }
+      else if (capacity > AYAME_CONNECTION_MAX) {
+        return AYAME_CONNECTION_MAX;
+      }
+      else {
+        return capacity;
+      }
+    }
+
     function updateButtons() {
       if (isConnected()) {
         disableElement('connect_button');
         enabelElement('disconnect_button');
         disableElement('room_prefix');
         disableElement('signaling_key');
+        disableElement('room_capacity');
       }
       else {
         enabelElement('connect_button');
         disableElement('disconnect_button');
         enabelElement('room_prefix');
         enabelElement('signaling_key');
+        enabelElement('room_capacity');
       }
     }
 
