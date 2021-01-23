@@ -43,6 +43,8 @@ URLを次の形式で指定すると、シグナリングキーとルームIDの
 
 - https://mganeko.github.io/browser_mcu_ayame/?room=ルームプレフィックス&key=シグナリングキー
 
+接続時のイメージ
+![browser-mcu-ayame-labo](img/browser_mcu_ayame_labo.png)
 
 ### 参加者側
 
@@ -63,6 +65,8 @@ URLを次の形式で指定すると、シグナリングキーとルームIDを
 ### 注意点
 
 - MCU側のブラウザのウィンドウ/タブが完全に隠れてしまうと（最小化含む）映像の合成が停止してしまうため、必ず一部は表示した状態で利用する
+
+
 
 # コードを取得する場合
 
